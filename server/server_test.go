@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	pb "github.com/Aravinthvvs/gRPC/proto/train/train"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func newTestServer() *server {
@@ -24,10 +23,10 @@ func newTestServer() *server {
 func TestPurchaseTicket(t *testing.T) {
 	server := newTestServer()
 	tests := []struct {
-		name            string
-		req             *pb.PurchaseRequest
-		expectedResp    *pb.PurchaseResponse
-		expectedErrCode codes.Code
+		name         string
+		req          *pb.PurchaseRequest
+		expectedResp *pb.PurchaseResponse
+		expectedErr  error
 	}{
 		{
 			name: "successful purchase",
@@ -40,18 +39,41 @@ func TestPurchaseTicket(t *testing.T) {
 					Email:     "john.doe@example.com",
 				},
 			},
-			expectedResp:    &pb.PurchaseResponse{ReceiptId: "rec-1"},
-			expectedErrCode: codes.OK,
+			expectedResp: &pb.PurchaseResponse{ReceiptId: "rec-1"},
+			expectedErr:  nil,
 		},
-		// Add more test cases as needed
+		{
+			name: "failure purchase - No from value",
+			req: &pb.PurchaseRequest{
+				From: "",
+				To:   "France",
+				User: &pb.User{
+					FirstName: "John",
+					LastName:  "Doe",
+					Email:     "john.doe@example.com",
+				},
+			},
+			expectedResp: nil,
+			expectedErr:  fmt.Errorf("from and to fields are required"),
+		},
+		{
+			name: "failure purchase - no User details",
+			req: &pb.PurchaseRequest{
+				From: "London",
+				To:   "France",
+				User: nil,
+			},
+			expectedResp: nil,
+			expectedErr:  fmt.Errorf("user information is required"),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resp, err := server.PurchaseTicket(context.Background(), tt.req)
 			if err != nil {
-				st, _ := status.FromError(err)
-				assert.Equal(t, tt.expectedErrCode, st.Code())
+
+				assert.Equal(t, tt.expectedErr, err)
 			}
 			assert.Equal(t, tt.expectedResp, resp)
 		})
