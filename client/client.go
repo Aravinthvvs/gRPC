@@ -12,6 +12,47 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Client wraps the gRPC client
+type Client struct {
+	client pb.TicketServiceClient
+}
+
+// NewClient creates a new Client instance
+func NewClient(conn *grpc.ClientConn) *Client {
+	return &Client{
+		client: pb.NewTicketServiceClient(conn),
+	}
+}
+
+// PurchaseTicket is a method to call the PurchaseTicket gRPC method
+func (c *Client) PurchaseTicket(ctx context.Context, from, to string, user *pb.User) (*pb.PurchaseResponse, error) {
+	return c.client.PurchaseTicket(ctx, &pb.PurchaseRequest{
+		From: from,
+		To:   to,
+		User: user,
+	})
+}
+
+func (c *Client) GetReceipt(ctx context.Context, receiptID string) (*pb.ReceiptResponse, error) {
+	req := &pb.ReceiptRequest{ReceiptId: receiptID}
+	return c.client.GetReceipt(ctx, req)
+}
+
+func (c *Client) RemoveUser(ctx context.Context, email string) (*pb.RemoveUserResponse, error) {
+	req := &pb.RemoveUserRequest{Email: email}
+	return c.client.RemoveUser(ctx, req)
+}
+
+func (c *Client) ModifySeat(ctx context.Context, email, newSeat string) (*pb.ModifySeatResponse, error) {
+	req := &pb.ModifySeatRequest{Email: email, NewSeat: newSeat}
+	return c.client.ModifySeat(ctx, req)
+}
+
+func (c *Client) ViewUsersBySection(ctx context.Context, section string) (*pb.ViewUsersResponse, error) {
+	req := &pb.ViewUsersRequest{Section: section}
+	return c.client.ViewUsersBySection(ctx, req)
+}
+
 func main() {
 	// Parse command-line arguments
 	if len(os.Args) < 2 {
@@ -27,7 +68,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	c := pb.NewTicketServiceClient(conn)
+	c := NewClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
@@ -47,7 +88,7 @@ func main() {
 			LastName:  lastName,
 			Email:     email,
 		}
-		resp, err := c.PurchaseTicket(ctx, &pb.PurchaseRequest{From: from, To: to, User: user})
+		resp, err := c.PurchaseTicket(ctx, from, to, user)
 		if err != nil {
 			log.Fatalf("could not purchase ticket: %v", err)
 		}
@@ -58,7 +99,7 @@ func main() {
 			log.Fatalf("Usage: %s get_receipt <receipt_id>", os.Args[0])
 		}
 		receiptId := os.Args[2]
-		resp, err := c.GetReceipt(ctx, &pb.ReceiptRequest{ReceiptId: receiptId})
+		resp, err := c.GetReceipt(ctx, receiptId)
 		if err != nil {
 			log.Fatalf("could not get receipt: %v", err)
 		}
@@ -69,7 +110,7 @@ func main() {
 			log.Fatalf("Usage: %s view_users <section>", os.Args[0])
 		}
 		section := os.Args[2]
-		resp, err := c.ViewUsersBySection(ctx, &pb.ViewUsersRequest{Section: section})
+		resp, err := c.ViewUsersBySection(ctx, section)
 		if err != nil {
 			log.Fatalf("could not view users: %v", err)
 		}
@@ -80,7 +121,7 @@ func main() {
 			log.Fatalf("Usage: %s remove_user <email>", os.Args[0])
 		}
 		email := os.Args[2]
-		resp, err := c.RemoveUser(ctx, &pb.RemoveUserRequest{Email: email})
+		resp, err := c.RemoveUser(ctx, email)
 		if err != nil {
 			log.Fatalf("could not remove user: %v", err)
 		}
@@ -96,7 +137,7 @@ func main() {
 		}
 		email := os.Args[2]
 		newSeat := os.Args[3]
-		resp, err := c.ModifySeat(ctx, &pb.ModifySeatRequest{Email: email, NewSeat: newSeat})
+		resp, err := c.ModifySeat(ctx, email, newSeat)
 		if err != nil {
 			log.Fatalf("could not modify seat: %v", err)
 		}
