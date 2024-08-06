@@ -180,13 +180,13 @@ func (s *server) ModifySeat(ctx context.Context, req *pb.ModifySeatRequest) (*pb
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":50055")
+	lis, err := net.Listen("tcp", ":50056")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterTicketServiceServer(s, newServer())
-	log.Println("Starting server on :50055")
+	log.Println("Starting server on :50056")
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
